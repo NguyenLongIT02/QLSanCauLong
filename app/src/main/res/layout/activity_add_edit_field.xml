@@ -48,6 +48,23 @@
             android:inputType="text"
             android:layout_marginTop="16dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Loại sân"
+            android:textSize="14sp"
+            android:textColor="@android:color/black"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <Spinner
+            android:id="@+id/spinner_field_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:background="@android:drawable/edit_text"
+            android:padding="12dp" />
+
         <EditText
             android:id="@+id/edit_field_price"
             android:layout_width="match_parent"

@@ -27,7 +27,8 @@ public class BookingDetailActivity extends AppCompatActivity {
     private TextView tvDate, tvStartTime, tvEndTime, tvHours, tvStatus, tvTotalPrice;
     private RecyclerView rvServices;
     private LinearLayout layoutServices;
-    private Button btnEdit, btnDelete, btnChangeStatus, btnBack;
+    private Button btnEdit, btnDelete, btnChangeStatus;
+    private android.widget.ImageButton btnBack;
 
     private DatabaseHelper dbHelper;
     private int bookingId;
@@ -38,20 +39,26 @@ public class BookingDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_booking_detail);
+        try {
+            setContentView(R.layout.activity_booking_detail);
 
-        initViews();
-        dbHelper = new DatabaseHelper(this);
+            initViews();
+            dbHelper = new DatabaseHelper(this);
 
-        bookingId = getIntent().getIntExtra("booking_id", -1);
-        if (bookingId == -1) {
-            Toast.makeText(this, "Không tìm thấy thông tin đặt sân", Toast.LENGTH_SHORT).show();
+            bookingId = getIntent().getIntExtra("booking_id", -1);
+            if (bookingId == -1) {
+                Toast.makeText(this, "Không tìm thấy thông tin đặt sân", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+
+            loadBookingData();
+            setupListeners();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Lỗi khởi tạo: " + e.getMessage(), Toast.LENGTH_LONG).show();
             finish();
-            return;
         }
-
-        loadBookingData();
-        setupListeners();
     }
 
     private void initViews() {
@@ -104,6 +111,9 @@ public class BookingDetailActivity extends AppCompatActivity {
             layoutServices.setVisibility(View.VISIBLE);
             setupRecyclerView();
         }
+
+        // Điều chỉnh hiển thị nút theo trạng thái
+        updateButtonVisibility();
     }
 
     private void setupRecyclerView() {
@@ -128,6 +138,25 @@ public class BookingDetailActivity extends AppCompatActivity {
                 color = ContextCompat.getColor(this, android.R.color.black);
         }
         tvStatus.setTextColor(color);
+    }
+
+    private void updateButtonVisibility() {
+        if (booking == null)
+            return;
+
+        String status = booking.getStatus();
+
+        if ("Đã thanh toán".equals(status)) {
+            // Sân đã thanh toán: chỉ cho phép XÓA
+            btnEdit.setVisibility(View.GONE);
+            btnDelete.setVisibility(View.VISIBLE);
+            btnChangeStatus.setVisibility(View.GONE);
+        } else {
+            // Sân chưa thanh toán: cho phép SỬA, XÓA và ĐỔI TRẠNG THÁI
+            btnEdit.setVisibility(View.VISIBLE);
+            btnDelete.setVisibility(View.VISIBLE);
+            btnChangeStatus.setVisibility(View.VISIBLE);
+        }
     }
 
     private void setupListeners() {
@@ -189,6 +218,7 @@ public class BookingDetailActivity extends AppCompatActivity {
         if (success) {
             tvStatus.setText(newStatus);
             updateStatusColor();
+            updateButtonVisibility(); // Cập nhật hiển thị nút sau khi đổi trạng thái
             Toast.makeText(this, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "Có lỗi xảy ra", Toast.LENGTH_SHORT).show();

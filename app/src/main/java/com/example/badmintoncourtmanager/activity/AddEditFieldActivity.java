@@ -16,6 +16,7 @@ import com.example.badmintoncourtmanager.model.Field;
 
 public class AddEditFieldActivity extends AppCompatActivity {
     private EditText editFieldName, editFieldPrice;
+    private Spinner spinnerFieldType;
     private Button buttonSave;
     private ImageButton buttonBack;
     private DatabaseHelper databaseHelper;
@@ -32,8 +33,12 @@ public class AddEditFieldActivity extends AppCompatActivity {
 
         editFieldName = findViewById(R.id.edit_field_name);
         editFieldPrice = findViewById(R.id.edit_field_price);
+        spinnerFieldType = findViewById(R.id.spinner_field_type);
         buttonSave = findViewById(R.id.button_save);
         buttonBack = findViewById(R.id.button_back);
+
+        // Setup spinner with field types
+        setupFieldTypeSpinner();
 
         // Check if editing existing field
         if (getIntent().hasExtra("FIELD_ID")) {
@@ -41,15 +46,36 @@ public class AddEditFieldActivity extends AppCompatActivity {
             fieldId = getIntent().getIntExtra("FIELD_ID", -1);
             editFieldName.setText(getIntent().getStringExtra("FIELD_NAME"));
             editFieldPrice.setText(String.valueOf(getIntent().getDoubleExtra("FIELD_PRICE", 0)));
+
+            // Set field type in spinner
+            String fieldType = getIntent().getStringExtra("FIELD_TYPE");
+            if (fieldType != null) {
+                ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerFieldType.getAdapter();
+                int position = adapter.getPosition(fieldType);
+                if (position >= 0) {
+                    spinnerFieldType.setSelection(position);
+                }
+            }
         }
 
         buttonBack.setOnClickListener(v -> finish());
         buttonSave.setOnClickListener(v -> saveField());
     }
 
+    private void setupFieldTypeSpinner() {
+        String[] fieldTypes = { "Đơn", "Đôi", "VIP" };
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                fieldTypes);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerFieldType.setAdapter(adapter);
+    }
+
     private void saveField() {
         String name = editFieldName.getText().toString().trim();
         String priceStr = editFieldPrice.getText().toString().trim();
+        String selectedType = spinnerFieldType.getSelectedItem().toString();
 
         if (name.isEmpty()) {
             editFieldName.setError("Vui lòng nhập tên sân");
@@ -78,11 +104,11 @@ public class AddEditFieldActivity extends AppCompatActivity {
         }
 
         if (isEditMode) {
-            Field field = new Field(fieldId, name, "Đơn", price, "Hoạt động", "");
+            Field field = new Field(fieldId, name, selectedType, price, "Hoạt động", "");
             databaseHelper.updateField(field);
             Toast.makeText(this, "Đã cập nhật sân", Toast.LENGTH_SHORT).show();
         } else {
-            Field field = new Field(name, "Đơn", price, "Hoạt động", "");
+            Field field = new Field(name, selectedType, price, "Hoạt động", "");
             databaseHelper.addField(field);
             Toast.makeText(this, "Đã thêm sân mới", Toast.LENGTH_SHORT).show();
         }

@@ -93,4 +93,30 @@ public class BookingManagementActivity extends AppCompatActivity implements Book
                 .setNegativeButton("Hủy", null)
                 .show();
     }
+
+    @Override
+    public void onEditClick(Booking booking) {
+        Intent intent = new Intent(this, AddEditBookingActivity.class);
+        intent.putExtra("booking_id", booking.getId());
+        startActivity(intent);
+    }
+
+    @Override
+    public void onDeleteClick(Booking booking) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Xác nhận xóa")
+                .setMessage("Bạn có chắc chắn muốn xóa lịch đặt sân này?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    boolean success = databaseHelper.deleteBooking(booking.getId());
+                    if (success) {
+                        android.widget.Toast.makeText(this, "Đã xóa lịch đặt!", android.widget.Toast.LENGTH_SHORT)
+                                .show();
+                        loadBookings(); // Refresh list
+                    } else {
+                        android.widget.Toast.makeText(this, "Xóa thất bại!", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
 }
