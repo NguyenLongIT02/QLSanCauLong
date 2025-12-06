@@ -76,6 +76,17 @@ public class AddEditBookingActivity extends AppCompatActivity {
         } else {
             selectedDate = Calendar.getInstance();
             updateDateTimeDisplay();
+
+            // Check for pre-selected field (from AvailableFieldsActivity)
+            int preFieldId = getIntent().getIntExtra("field_id", -1);
+            if (preFieldId != -1) {
+                for (int i = 0; i < fieldList.size(); i++) {
+                    if (fieldList.get(i).getId() == preFieldId) {
+                        spinnerField.setSelection(i);
+                        break;
+                    }
+                }
+            }
         }
     }
 

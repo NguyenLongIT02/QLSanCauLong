@@ -3,6 +3,7 @@ package com.example.badmintoncourtmanager.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -61,8 +62,7 @@ public class BookingManagementActivity extends AppCompatActivity implements Book
             recyclerView.setAdapter(adapter);
         } catch (Exception e) {
             e.printStackTrace();
-            android.widget.Toast.makeText(this, "Lỗi tải lịch đặt: " + e.getMessage(), android.widget.Toast.LENGTH_LONG)
-                    .show();
+            Toast.makeText(this, "Lỗi tải lịch đặt: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -71,52 +71,5 @@ public class BookingManagementActivity extends AppCompatActivity implements Book
         Intent intent = new Intent(this, BookingDetailActivity.class);
         intent.putExtra("booking_id", booking.getId());
         startActivity(intent);
-    }
-
-    @Override
-    public void onPayClick(Booking booking) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Xác nhận thanh toán")
-                .setMessage("Bạn chắc chắn muốn thanh toán đơn đặt sân này?")
-                .setPositiveButton("Thanh toán", (dialog, which) -> {
-                    boolean success = databaseHelper.updateBookingStatus(booking.getId(), "Đã thanh toán");
-                    if (success) {
-                        android.widget.Toast
-                                .makeText(this, "Đã thanh toán thành công!", android.widget.Toast.LENGTH_SHORT).show();
-                        loadBookings(); // Refresh list to update UI and hide pay button
-                    } else {
-                        android.widget.Toast
-                                .makeText(this, "Cập nhật trạng thái thất bại!", android.widget.Toast.LENGTH_SHORT)
-                                .show();
-                    }
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    @Override
-    public void onEditClick(Booking booking) {
-        Intent intent = new Intent(this, AddEditBookingActivity.class);
-        intent.putExtra("booking_id", booking.getId());
-        startActivity(intent);
-    }
-
-    @Override
-    public void onDeleteClick(Booking booking) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Xác nhận xóa")
-                .setMessage("Bạn có chắc chắn muốn xóa lịch đặt sân này?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
-                    boolean success = databaseHelper.deleteBooking(booking.getId());
-                    if (success) {
-                        android.widget.Toast.makeText(this, "Đã xóa lịch đặt!", android.widget.Toast.LENGTH_SHORT)
-                                .show();
-                        loadBookings(); // Refresh list
-                    } else {
-                        android.widget.Toast.makeText(this, "Xóa thất bại!", android.widget.Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
     }
 }

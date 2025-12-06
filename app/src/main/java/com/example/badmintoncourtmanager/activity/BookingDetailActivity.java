@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,15 +21,18 @@ import com.example.badmintoncourtmanager.database.DatabaseHelper;
 import com.example.badmintoncourtmanager.model.Booking;
 import com.example.badmintoncourtmanager.model.ServiceUsage;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class BookingDetailActivity extends AppCompatActivity {
     private TextView tvBookingId, tvFieldName, tvCustomerName, tvCustomerPhone;
-    private TextView tvDate, tvStartTime, tvEndTime, tvHours, tvStatus, tvTotalPrice;
+    private TextView tvDate, tvTimeRange, tvStatus, tvTotalPrice;
     private RecyclerView rvServices;
     private LinearLayout layoutServices;
     private Button btnEdit, btnDelete, btnChangeStatus;
-    private android.widget.ImageButton btnBack;
+    private ImageButton btnBack;
 
     private DatabaseHelper dbHelper;
     private int bookingId;
@@ -67,9 +71,7 @@ public class BookingDetailActivity extends AppCompatActivity {
         tvCustomerName = findViewById(R.id.tvCustomerName);
         tvCustomerPhone = findViewById(R.id.tvCustomerPhone);
         tvDate = findViewById(R.id.tvDate);
-        tvStartTime = findViewById(R.id.tvStartTime);
-        tvEndTime = findViewById(R.id.tvEndTime);
-        tvHours = findViewById(R.id.tvHours);
+        tvTimeRange = findViewById(R.id.tvTimeRange);
         tvStatus = findViewById(R.id.tvStatus);
         tvTotalPrice = findViewById(R.id.tvTotalPrice);
         rvServices = findViewById(R.id.rvServices);
@@ -88,22 +90,28 @@ public class BookingDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Hiển thị thông tin booking
         tvBookingId.setText("Mã đặt sân: #" + booking.getId());
         tvFieldName.setText(booking.getFieldName());
-        tvCustomerName.setText(booking.getCustomerName());
+        tvCustomerName.setText("Khách hàng: " + booking.getCustomerName());
         tvCustomerPhone.setText(booking.getCustomerPhone());
-        tvDate.setText(booking.getDate());
-        tvStartTime.setText(booking.getStartTime());
-        tvEndTime.setText(booking.getEndTime());
-        tvHours.setText(String.format("%.1f giờ", booking.getHours()));
+
+        // Format Date nicely if possible, assume it's stored as dd/MM/yyyy
+        tvDate.setText("Ngày: " + booking.getDate());
+
+        // Calculate hours properly
+        double hours = booking.getHours();
+        if (hours == 0) {
+            hours = calculateHours(booking.getStartTime(), booking.getEndTime());
+        }
+
+        String timeDisplay = String.format("%s - %s (%.1fh)", booking.getStartTime(), booking.getEndTime(), hours);
+        tvTimeRange.setText(timeDisplay);
+
         tvStatus.setText(booking.getStatus());
         tvTotalPrice.setText(String.format("%,.0f đ", booking.getTotalPrice()));
 
-        // Đổi màu status
         updateStatusColor();
 
-        // Load services
         serviceUsages = dbHelper.getServiceUsagesByBookingId(bookingId);
         if (serviceUsages.isEmpty()) {
             layoutServices.setVisibility(View.GONE);
@@ -112,8 +120,20 @@ public class BookingDetailActivity extends AppCompatActivity {
             setupRecyclerView();
         }
 
-        // Điều chỉnh hiển thị nút theo trạng thái
         updateButtonVisibility();
+    }
+
+    // Helper to calculate hours from HH:mm strings
+    private double calculateHours(String start, String end) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            Date dateStart = sdf.parse(start);
+            Date dateEnd = sdf.parse(end);
+            long diff = dateEnd.getTime() - dateStart.getTime();
+            return (double) diff / (1000 * 60 * 60);
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private void setupRecyclerView() {
@@ -124,6 +144,12 @@ public class BookingDetailActivity extends AppCompatActivity {
 
     private void updateStatusColor() {
         int color;
+        int bgResCb = R.drawable.bg_status_rounded; // Default rounded bg
+
+        // We will tint the background or change text color
+        // Let's change text color and distinct background tint if needed,
+        // but simple text color on light bg is cleaner.
+
         switch (booking.getStatus()) {
             case "Đã đặt":
                 color = ContextCompat.getColor(this, android.R.color.holo_blue_dark);
@@ -138,6 +164,7 @@ public class BookingDetailActivity extends AppCompatActivity {
                 color = ContextCompat.getColor(this, android.R.color.black);
         }
         tvStatus.setTextColor(color);
+        // Note: background drawable is set in XML layout
     }
 
     private void updateButtonVisibility() {
@@ -147,12 +174,10 @@ public class BookingDetailActivity extends AppCompatActivity {
         String status = booking.getStatus();
 
         if ("Đã thanh toán".equals(status)) {
-            // Sân đã thanh toán: chỉ cho phép XÓA
             btnEdit.setVisibility(View.GONE);
             btnDelete.setVisibility(View.VISIBLE);
             btnChangeStatus.setVisibility(View.GONE);
         } else {
-            // Sân chưa thanh toán: cho phép SỬA, XÓA và ĐỔI TRẠNG THÁI
             btnEdit.setVisibility(View.VISIBLE);
             btnDelete.setVisibility(View.VISIBLE);
             btnChangeStatus.setVisibility(View.VISIBLE);
@@ -218,7 +243,7 @@ public class BookingDetailActivity extends AppCompatActivity {
         if (success) {
             tvStatus.setText(newStatus);
             updateStatusColor();
-            updateButtonVisibility(); // Cập nhật hiển thị nút sau khi đổi trạng thái
+            updateButtonVisibility();
             Toast.makeText(this, "Đã cập nhật trạng thái", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "Có lỗi xảy ra", Toast.LENGTH_SHORT).show();
@@ -228,7 +253,6 @@ public class BookingDetailActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Reload data khi quay lại từ màn hình edit
         loadBookingData();
     }
 }
