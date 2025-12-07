@@ -613,6 +613,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    public boolean isBookingOverlap(int bookingId, int fieldId, String date, String startTime, String endTime) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT id FROM " + TABLE_BOOKINGS + " WHERE " +
+                "field_id = ? AND date = ? AND id != ? AND " +
+                "(" +
+                "(start_time < ? AND end_time > ?) OR " + // New start is inside existing
+                "(start_time < ? AND end_time > ?) OR " + // New end is inside existing
+                "(start_time >= ? AND end_time <= ?)" + // Existing is inside new (Covered by above, but ensuring full
+                                                        // coverage)
+                ")";
+
+        // Simplified Logic: Overlap if (StartA < EndB) and (EndA > StartB)
+        // Existing: Start, End
+        // New: newStart, newEnd
+        // Query: SELECT * WHERE field = ? AND date = ? AND id != ? AND (start_time < ?
+        // AND end_time > ?)
+
+        String optimizedQuery = "SELECT id FROM " + TABLE_BOOKINGS + " WHERE " +
+                "field_id = ? AND date = ? AND id != ? AND " +
+                "(start_time < ? AND end_time > ?)";
+
+        Cursor cursor = db.rawQuery(optimizedQuery, new String[] {
+                String.valueOf(fieldId),
+                date,
+                String.valueOf(bookingId),
+                endTime,
+                startTime
+        });
+
+        boolean overlap = cursor.getCount() > 0;
+        cursor.close();
+        db.close();
+        return overlap;
+    }
+
     // Get service usages by booking ID
     public List<ServiceUsage> getServiceUsagesByBookingId(int bookingId) {
         List<ServiceUsage> usageList = new ArrayList<>();

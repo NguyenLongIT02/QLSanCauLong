@@ -48,6 +48,8 @@ public class AddEditBookingActivity extends AppCompatActivity {
     private int bookingId = -1;
     private Calendar selectedDate;
     private String currentStatus = "Đã đặt";
+    private String originalDate;
+    private String originalStartTime;
     private java.util.Map<Integer, Integer> inventoryMap = new java.util.HashMap<>();
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
@@ -61,6 +63,7 @@ public class AddEditBookingActivity extends AppCompatActivity {
         initViews();
         dbHelper = new DatabaseHelper(this);
         selectedServices = new ArrayList<>();
+        selectedDate = Calendar.getInstance(); // Initialize here
         setupTimeSpinners();
 
         // Check if editing
@@ -74,7 +77,6 @@ public class AddEditBookingActivity extends AppCompatActivity {
         if (bookingId != -1) {
             loadBookingData();
         } else {
-            selectedDate = Calendar.getInstance();
             updateDateTimeDisplay();
 
             // Check for pre-selected field (from AvailableFieldsActivity)
@@ -261,7 +263,7 @@ public class AddEditBookingActivity extends AppCompatActivity {
             if (usage.getServiceId() == service.getId()) {
                 if (usage.getQuantity() < maxQty) {
                     usage.setQuantity(usage.getQuantity() + 1);
-                    serviceAdapter.notifyDataSetChanged();
+                    serviceAdapter.notifyItemChanged(selectedServices.indexOf(usage));
                     calculateTotalPrice();
                 } else {
                     Toast.makeText(this, "Đã đạt giới hạn tồn kho: " + maxQty, Toast.LENGTH_SHORT).show();
@@ -342,6 +344,8 @@ public class AddEditBookingActivity extends AppCompatActivity {
             etCustomerName.setText(booking.getCustomerName());
             etCustomerPhone.setText(booking.getCustomerPhone());
             currentStatus = booking.getStatus(); // Save current status
+            originalDate = booking.getDate();
+            originalStartTime = booking.getStartTime();
 
             // Set field
             for (int i = 0; i < fieldList.size(); i++) {
@@ -353,9 +357,17 @@ public class AddEditBookingActivity extends AppCompatActivity {
 
             // Set date
             try {
-                selectedDate.setTime(dateFormat.parse(booking.getDate()));
-                updateDateTimeDisplay();
+                if (booking.getDate() != null) {
+                    selectedDate.setTime(dateFormat.parse(booking.getDate()));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            // Always update display, showing loaded date or default initialized date
+            // (today)
+            updateDateTimeDisplay();
 
+            try {
                 // Set time spinners
                 @SuppressWarnings("unchecked")
                 ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerStartTime.getAdapter();
@@ -406,6 +418,45 @@ public class AddEditBookingActivity extends AppCompatActivity {
         }
 
         Field selectedField = fieldList.get(spinnerField.getSelectedItemPosition());
+        String dateStr = dateFormat.format(selectedDate.getTime());
+        String startTimeStr = spinnerStartTime.getSelectedItem().toString();
+        String endTimeStr = spinnerEndTime.getSelectedItem().toString();
+
+        // Check for past time
+        Calendar now = Calendar.getInstance();
+        Calendar bookingTime = Calendar.getInstance();
+        try {
+            bookingTime.setTime(dateFormat.parse(dateStr));
+            java.util.Date time = timeFormat.parse(startTimeStr);
+            Calendar timeCal = Calendar.getInstance();
+            timeCal.setTime(time);
+            bookingTime.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY));
+            bookingTime.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE));
+            bookingTime.set(Calendar.SECOND, 0);
+            bookingTime.set(Calendar.MILLISECOND, 0);
+
+            if (bookingTime.before(now)) {
+                boolean isTimeChanged = true;
+                // If editing, check if time was changed
+                if (bookingId != -1) {
+                    if (dateStr.equals(originalDate) && startTimeStr.equals(originalStartTime)) {
+                        isTimeChanged = false;
+                    }
+                }
+
+                if (isTimeChanged) {
+                    Toast.makeText(this, "Không thể đặt lịch cho thời gian trong quá khứ!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        if (dbHelper.isBookingOverlap(bookingId, selectedField.getId(), dateStr, startTimeStr, endTimeStr)) {
+            Toast.makeText(this, "Giờ này đã có người đặt rồi! Vui lòng chọn giờ khác.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         double fieldPrice = selectedField.getPricePerHour() * hours;
         double servicePrice = 0;
         for (ServiceUsage usage : selectedServices) {
