@@ -173,7 +173,7 @@ public class BookingDetailActivity extends AppCompatActivity {
 
         String status = booking.getStatus();
 
-        if ("Đã thanh toán".equals(status)) {
+        if ("Đã thanh toán".equals(status) || "Đã hủy".equals(status)) {
             btnEdit.setVisibility(View.GONE);
             btnDelete.setVisibility(View.VISIBLE);
             btnChangeStatus.setVisibility(View.GONE);
